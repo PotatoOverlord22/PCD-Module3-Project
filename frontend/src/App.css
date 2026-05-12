@@ -1,0 +1,173 @@
+.login-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: #f5f7fa;
+}
+
+.login-form {
+    background: white;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+}
+
+.login-form h2 { margin-bottom: 0.3rem; }
+.login-form .subtitle { color: #666; margin-bottom: 1.5rem; }
+.login-form input {
+    width: 100%;
+    padding: 0.7rem;
+    margin: 0.4rem 0;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+.login-form button {
+    width: 100%;
+    padding: 0.7rem;
+    margin-top: 0.8rem;
+    background: #3498db;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    cursor: pointer;
+}
+.login-form button:hover { background: #2980b9; }
+.login-form .hint { font-size: 0.8rem; color: #999; margin-top: 1rem; }
+.error { color: #e74c3c; margin-top: 0.5rem; }
+
+.app { min-height: 100vh; background: #f5f7fa; }
+
+.header {
+    background: #2c3e50;
+    color: white;
+    padding: 1rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.header h1 { font-size: 1.3rem; margin: 0; }
+.user-info { display: flex; align-items: center; gap: 1rem; font-size: 0.9rem; }
+.logout-btn {
+    padding: 0.3rem 0.8rem;
+    background: #e74c3c;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.container { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
+
+.tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+.tabs button {
+    padding: 0.6rem 1.2rem;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+.tabs button.active {
+    background: #3498db;
+    color: white;
+    border-color: #3498db;
+}
+
+.stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+.stat-card {
+    background: white;
+    padding: 1.2rem;
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+.stat-value { font-size: 2rem; font-weight: bold; color: #2c3e50; }
+.stat-label { font-size: 0.85rem; color: #666; margin-top: 0.3rem; }
+
+.day-list { display: grid; gap: 0.8rem; }
+
+.day-card {
+    background: white;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+    border-left: 4px solid #2ecc71;
+    cursor: pointer;
+    transition: transform 0.1s;
+}
+.day-card:hover { transform: translateX(4px); }
+.day-card.anomaly { border-left-color: #e74c3c; }
+.day-date { font-weight: 600; }
+.room-badges { display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap; }
+.badge {
+    padding: 0.2rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+}
+.badge.normal { background: #d4edda; color: #155724; }
+.badge.anomaly { background: #f8d7da; color: #721c24; }
+
+.detail-panel {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+.detail-panel h3 { margin-bottom: 1rem; }
+.room-detail { margin-bottom: 1.2rem; }
+.room-detail h4 { margin-bottom: 0.5rem; }
+
+.shap-bars { margin-left: 1rem; }
+.feature-bar {
+    display: flex;
+    align-items: center;
+    margin: 0.3rem 0;
+}
+.bar-label { width: 60px; font-size: 0.85rem; font-weight: 500; }
+.bar {
+    height: 18px;
+    background: #e74c3c;
+    border-radius: 3px;
+    min-width: 5px;
+}
+.bar-value { margin-left: 0.5rem; font-size: 0.8rem; color: #666; }
+
+.back-btn {
+    margin-top: 1rem;
+    padding: 0.5rem 1rem;
+    background: #3498db;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.eval-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+.eval-table th, .eval-table td {
+    padding: 0.6rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+    font-size: 0.85rem;
+}
+.eval-table th { background: #f8f9fa; font-weight: 600; }
