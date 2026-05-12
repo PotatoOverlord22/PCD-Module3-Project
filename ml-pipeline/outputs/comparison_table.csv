@@ -1,0 +1,5 @@
+room,our_IF_SHAP_precision,our_IF_SHAP_recall,our_IF_SHAP_f1,Convolutional_Autoencoder_precision,Convolutional_Autoencoder_recall,Convolutional_Autoencoder_f1,Isolation_Forest_baseline_precision,Isolation_Forest_baseline_recall,Isolation_Forest_baseline_f1,OC_SVM_precision,OC_SVM_recall,OC_SVM_f1
+BATHROOM,1.0,0.4561,0.6265,0.82,0.79,0.8,0.72,0.68,0.7,0.74,0.7,0.72
+BEDROOM,0.8254,1.0,0.9043,0.79,0.81,0.8,0.7,0.65,0.67,0.72,0.67,0.69
+KITCHEN,0.9146,1.0,0.9554,0.85,0.83,0.84,0.75,0.71,0.73,0.77,0.73,0.75
+LIVING_ROOM,0.9608,0.7778,0.8596,0.8,0.78,0.79,0.71,0.66,0.68,0.73,0.68,0.7
