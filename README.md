@@ -39,12 +39,18 @@ project/
 │   │   ├── services/                # ML service (loads models) + data service
 │   │   └── middleware/              # Audit logging
 │   └── requirements.txt
-├── frontend/
+├── frontend/                            # React + TypeScript (Vite, MUI, Zod)
 │   ├── src/
-│   │   ├── App.jsx                  # React dashboard (all tabs)
-│   │   ├── api.js                   # API client (auth, fetch, post)
-│   │   └── App.css                  # Styling
+│   │   ├── main.tsx                 # Entry point
+│   │   ├── components/              # App, Login, DayCard, DayDetail, views...
+│   │   ├── layouts/                 # DashboardLayout (AppBar + Tabs + Outlet)
+│   │   ├── routes/                  # ProtectedRoute (auth guard)
+│   │   ├── api/                     # Typed fetch client + API request functions
+│   │   ├── model/                   # Zod schemas per endpoint (auth, day, audit, etc.)
+│   │   └── utils/                   # CSV parser with validation
 │   └── package.json
+├── documents/
+│   └── frontend-project-structure.md    # Detailed frontend architecture documentation
 ├── venv/                            # Python virtual environment
 └── README.md                        # This file
 ```
@@ -75,7 +81,7 @@ Same dataset, same test set, same ground truth labels as Llumiguano et al. — d
 ### Prerequisites
 
 - Python 3.12
-- Node.js (for React frontend)
+- Node.js 20+ (for React + TypeScript frontend)
 
 ### 1. Setup
 
@@ -116,7 +122,8 @@ API docs: http://localhost:8000/docs
 ### 5. Start Frontend (Terminal 2)
 
 ```bash
-cd [frontend dir path]]
+cd [frontend dir path]
+npm install
 npm run dev
 ```
 
@@ -239,6 +246,6 @@ Currently the backend reads results from JSON files in `ml-pipeline/outputs/`. T
 ## Reproducibility
 
 - Fixed random seed: 42
-- Python 3.12, Node.js 18+
+- Python 3.12, Node.js 20+
 - All dependencies in `ml-pipeline/requirements.txt` and `backend/requirements.txt`
 - Data download script included (`data/download.sh`)
