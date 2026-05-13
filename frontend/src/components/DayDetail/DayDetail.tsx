@@ -38,6 +38,23 @@ export default function DayDetail() {
                         {info.score})
                     </Typography>
 
+                    {info.explanation && (
+                        <Typography
+                            variant="body2"
+                            sx={{
+                                ml: 2,
+                                mt: 1,
+                                p: 1.5,
+                                bgcolor: "action.hover",
+                                borderRadius: 1,
+                                whiteSpace: "pre-line",
+                                fontStyle: "italic",
+                            }}
+                        >
+                            {info.explanation}
+                        </Typography>
+                    )}
+
                     {info.top_features && info.top_features.length > 0 && (
                         <Box className="day-detail__features" sx={{ ml: 2, mt: 1 }}>
                             {info.top_features.map((f, i) => (

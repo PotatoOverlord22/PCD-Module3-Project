@@ -3,11 +3,13 @@ import json
 import numpy as np
 import pandas as pd
 from pathlib import Path
+from datetime import datetime, timezone
 
 from .data_parser import ROOMS, parse_casas_raw, compute_presence_features, load_zenodo_test, get_training_data
 from .model import train_isolation_forest, predict, save_model
 from .evaluate import evaluate_room, build_comparison_table, save_results
 from .explainer import explain_anomalies, generate_human_readable
+from .config import MONGO_URI, MONGO_DB_NAME
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 DATA_DIR = PROJECT_ROOT / "data" / "raw"
@@ -19,6 +21,10 @@ CASAS_RAW_PATHS = [
     DATA_DIR / "data",
     DATA_DIR / "Aruba",
 ]
+
+# How many human-readable explanations to preview on the console per room.
+# Keeps terminal output manageable while still giving a quick sanity check.
+CONSOLE_PREVIEW_COUNT = 3
 
 
 def find_casas_raw():
@@ -63,6 +69,93 @@ def run_zenodo_only_mode():
 
     return training_data, test_data
 
+
+# ---------------------------------------------------------------------------
+# MongoDB helpers
+# ---------------------------------------------------------------------------
+
+def _get_mongo_db():
+    """Return a pymongo Database handle, or None if MongoDB is not configured."""
+    if not MONGO_URI:
+        return None
+    try:
+        from pymongo import MongoClient
+        client = MongoClient(MONGO_URI)
+        # Quick connectivity check
+        client.admin.command("ping")
+        db = client[MONGO_DB_NAME]
+        print(f"[pipeline] Connected to MongoDB Atlas — database: {MONGO_DB_NAME}")
+        return db
+    except Exception as e:
+        print(f"[pipeline] WARNING: Could not connect to MongoDB: {e}")
+        print("[pipeline] Results will only be saved to local files.")
+        return None
+
+
+def _write_results_to_mongo(db, all_explanations, all_results):
+    """Write anomaly days, normal days, and evaluation results to MongoDB."""
+    # --- Collect all test dates with their ground-truth labels ---
+    test_data = load_zenodo_test(ZENODO_DIR)
+
+    # Build a dict: date -> {room -> {status, score, top_features, explanation}}
+    days = {}
+
+    # First, populate from ground-truth labels (so we get normal days too)
+    for room in ROOMS:
+        labels = test_data[room]["labels"]
+        for _, row in labels.iterrows():
+            date = row["date"]
+            label = int(row["y_true"])
+            if date not in days:
+                days[date] = {"date": date, "rooms": {}}
+            if room not in days[date]["rooms"]:
+                days[date]["rooms"][room] = {
+                    "status": "anomaly" if label == 1 else "normal",
+                    "score": 0.0,
+                    "top_features": [],
+                    "explanation": None,
+                }
+
+    # Then overlay with SHAP explanations for detected anomalies
+    for room, explanations in all_explanations.items():
+        readable_list = generate_human_readable(explanations)
+        for exp, readable_text in zip(explanations, readable_list):
+            date = exp["date"]
+            if date not in days:
+                days[date] = {"date": date, "rooms": {}}
+            days[date]["rooms"][room] = {
+                "status": "anomaly",
+                "score": exp["anomaly_score"],
+                "top_features": exp["top_features"][:5],
+                "explanation": readable_text,
+            }
+
+    # --- Write anomaly_days collection ---
+    collection = db.anomaly_days
+    bulk_ops = []
+    from pymongo import ReplaceOne
+    for date, day_doc in days.items():
+        day_doc["_id"] = date
+        bulk_ops.append(ReplaceOne({"_id": date}, day_doc, upsert=True))
+
+    if bulk_ops:
+        result = collection.bulk_write(bulk_ops)
+        print(f"[pipeline] MongoDB anomaly_days: "
+              f"{result.upserted_count} inserted, {result.modified_count} updated")
+
+    # --- Write evaluation_results collection (idempotent: single document, replaced each run) ---
+    eval_doc = {
+        "_id": "latest",
+        "run_date": datetime.now(timezone.utc).isoformat(),
+        "results": all_results,
+    }
+    db.evaluation_results.replace_one({"_id": "latest"}, eval_doc, upsert=True)
+    print(f"[pipeline] MongoDB evaluation_results: upserted 'latest' document")
+
+
+# ---------------------------------------------------------------------------
+# Main pipeline
+# ---------------------------------------------------------------------------
 
 def main():
     print(f"Project root: {PROJECT_ROOT}")
@@ -126,19 +219,37 @@ def main():
         )
         all_explanations[room] = explanations
 
-        readable = generate_human_readable(explanations[:3])
+        readable = generate_human_readable(explanations[:CONSOLE_PREVIEW_COUNT])
         for r in readable:
             print(f"\n{r}")
 
     comparison = build_comparison_table(all_results)
     save_results(all_results, comparison, OUTPUT_DIR)
 
+    # --- Save structured explanations as JSON (local file) ---
     with open(OUTPUT_DIR / "explanations.json", "w") as f:
         json.dump(all_explanations, f, indent=2, default=str)
+
+    # --- Save human-readable explanations as text (local file) ---
+    with open(OUTPUT_DIR / "explanations_readable.txt", "w") as f:
+        for room, explanations in all_explanations.items():
+            f.write(f"\n{'='*60}\n")
+            f.write(f"  {room}\n")
+            f.write(f"{'='*60}\n\n")
+            for text in generate_human_readable(explanations):
+                f.write(text + "\n\n")
+    print(f"Human-readable explanations saved to {OUTPUT_DIR / 'explanations_readable.txt'}")
+
+    # --- Write results to MongoDB (if configured) ---
+    db = _get_mongo_db()
+    if db is not None:
+        _write_results_to_mongo(db, all_explanations, all_results)
 
     print(f"\n{'='*50}")
     print("Pipeline complete!")
     print(f"Results saved to {OUTPUT_DIR}")
+    if db is not None:
+        print(f"Results also written to MongoDB Atlas ({MONGO_DB_NAME})")
     print(f"{'='*50}")
 
 

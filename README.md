@@ -31,12 +31,18 @@ project/
 │   ├── outputs/                     # Trained models, results, SHAP plots
 │   ├── requirements.txt
 │   └── README.md                    # Detailed ML pipeline documentation
+├── .env.example                     # Template for environment variables (committed)
 ├── backend/
+│   ├── .env                         # Real secrets — gitignored, never committed
 │   ├── app/
 │   │   ├── main.py                  # FastAPI app
 │   │   ├── auth.py                  # JWT authentication + role-based access
+│   │   ├── config.py                # Environment variable loading (MONGO_URI, etc.)
 │   │   ├── routers/                 # API endpoints (days, anomalies, predict, audit)
-│   │   ├── services/                # ML service (loads models) + data service
+│   │   ├── services/
+│   │   │   ├── data_service.py      # Reads from MongoDB (or local files as fallback)
+│   │   │   ├── ml_service.py        # Loads models, live prediction + SHAP explanations
+│   │   │   └── mongo_service.py     # MongoDB connection singleton
 │   │   └── middleware/              # Audit logging
 │   └── requirements.txt
 ├── frontend/                            # React + TypeScript (Vite, MUI, Zod)
@@ -86,7 +92,6 @@ Same dataset, same test set, same ground truth labels as Llumiguano et al. — d
 ### 1. Setup
 
 ```bash
-
 # Create and setup virtual environment
 python3 -m venv venv
 ./venv/bin/pip install -r ml-pipeline/requirements.txt
@@ -101,28 +106,52 @@ chmod +x data/download.sh
 ./data/download.sh
 ```
 
-### 3. Run ML Pipeline (once)
+### 3. Configure MongoDB (Optional)
+
+The app works fully without MongoDB — it falls back to reading local JSON/CSV files from `ml-pipeline/outputs/`. To enable MongoDB Atlas for persistent cloud-ready storage:
+
+```bash
+# Copy the template to both backend and ml-pipeline
+cp .env.example backend/.env
+cp .env.example ml-pipeline/.env
+
+# Edit both .env files with your MongoDB Atlas connection string:
+# MONGO_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/?retryWrites=true&w=majority
+# MONGO_DB_NAME=pcd-module3-project
+```
+
+**How to get the connection string:**
+1. Go to [cloud.mongodb.com](https://cloud.mongodb.com) → Create a free M0 cluster
+2. Database Access → Create a user with read/write permissions
+3. Network Access → Add your IP (or `0.0.0.0/0` for development)
+4. Database → Connect → Drivers → Python → Copy the connection string
+
+The `.env` files are gitignored — secrets are never committed. On cloud platforms (GCP Cloud Run, AWS ECS), inject `MONGO_URI` and `MONGO_DB_NAME` as environment variables directly.
+
+### 4. Run ML Pipeline (once)
 
 ```bash
 cd ml-pipeline
 ../venv/bin/python -m src.pipeline
 ```
 
-Produces trained models + evaluation results + SHAP plots in `ml-pipeline/outputs/`.
+Produces trained models + evaluation results + SHAP plots + human-readable explanations in `ml-pipeline/outputs/`. If MongoDB is configured, also writes all results to MongoDB Atlas (idempotent — safe to re-run).
 
-### 4. Start Backend (Terminal 1)
+### 5. Start Backend (Terminal 1)
 
 ```bash
-cd [backend dir path]
+cd backend
 ../venv/bin/uvicorn app.main:app --port 8000 --reload
 ```
 
+Reads from MongoDB if `MONGO_URI` is set in `backend/.env`, otherwise falls back to local files.
+
 API docs: http://localhost:8000/docs
 
-### 5. Start Frontend (Terminal 2)
+### 6. Start Frontend (Terminal 2)
 
 ```bash
-cd [frontend dir path]
+cd frontend
 npm install
 npm run dev
 ```
@@ -137,22 +166,24 @@ Dashboard: http://localhost:5173
 React Frontend (localhost:5173)
     ↕ HTTP/JSON
 FastAPI Backend (localhost:8000)
-    ↕ loads on startup
-.joblib Models (ml-pipeline/outputs/)
-    ↕ trained by
-ML Pipeline (runs once, produces models + results)
-    ↕ reads
-CASAS Aruba Dataset (data/raw/aruba.csv)
+    ↕ reads from                  ↕ loads on startup
+MongoDB Atlas (optional)     .joblib Models (ml-pipeline/outputs/)
+    ↑ writes to                   ↑ trained by
+    └──── ML Pipeline (runs once, produces models + results) ────┘
+              ↕ reads
+    CASAS Aruba Dataset (data/raw/aruba.csv)
 ```
+
+When MongoDB is configured, the pipeline writes results (anomaly days + human-readable explanations + evaluation metrics) to MongoDB, and the backend reads from it. Without MongoDB, the backend falls back to local JSON/CSV files — no functionality is lost.
 
 ### User Roles
 
 | Role | Username | Password | Access |
 |------|----------|----------|--------|
-| Caregiver | caregiver | care123 | Anomalies, All Days, Simulate, Evaluation |
-| Admin | admin | admin123 | Everything above + Audit Log |
+| Caregiver | caregiver | care123 | Anomalies, All Days, Simulate |
+| Admin | admin | admin123 | Everything above + Evaluation, Audit Log |
 
-Caregivers cannot see the audit log. The backend enforces this — even if someone calls the `/audit` endpoint directly, it returns 403 Forbidden for non-admin users.
+Caregivers cannot see the Evaluation tab or the Audit Log. The backend enforces role checks on the `/audit` endpoint — even if someone calls it directly, it returns 403 Forbidden for non-admin users.
 
 ### Dashboard Tabs
 
@@ -162,7 +193,7 @@ Caregivers cannot see the audit log. The backend enforces this — even if someo
 
 **Simulate** — Upload a CSV file with raw sensor events (same format as `aruba.csv`). The model runs live inference and returns per-room anomaly status with SHAP explanations. Use `data/sample_day.csv` as a test file.
 
-**Evaluation** — Model performance metrics per room:
+**Evaluation** (admin only) — Model performance metrics per room:
 - **Precision**: Of all days the model flagged as anomalies, what fraction actually were anomalies? (High precision = few false alarms)
 - **Recall**: Of all actual anomaly days, what fraction did the model catch? (High recall = few missed anomalies)
 - **F1-Score**: Harmonic mean of Precision and Recall (balanced metric)
@@ -216,15 +247,26 @@ When a day is flagged as anomalous, SHAP (SHapley Additive exPlanations) tells y
 | POST | `/predict` | Any | Live inference from raw events |
 | GET | `/audit` | Admin | Audit log |
 
+## What's Done
+
+### MongoDB Atlas Integration
+
+The pipeline and backend now support MongoDB Atlas (free M0 tier) as an optional persistent data store:
+- **Pipeline** writes anomaly days (with human-readable SHAP explanations) + evaluation metrics to MongoDB after each run
+- **Backend** reads from MongoDB when `MONGO_URI` is configured, falls back to local JSON/CSV files otherwise
+- **Idempotent writes** — running the pipeline multiple times replaces existing data, never duplicates
+- **Environment-based config** — connection string loaded from `.env` files locally, injected as env vars on cloud platforms
+- **Live predictions** (`/predict`) generate human-readable explanations on-the-fly using SHAP + training means from the saved scaler
+
+### Human-Readable Explanations
+
+Anomalies now include plain-text explanations with:
+- Time-of-day context (morning/afternoon/evening/night)
+- Magnitude qualifiers (slightly/moderately/significantly) calibrated from actual SHAP distributions
+- Concrete sensor counts vs training baselines (e.g. "12 sensor events vs typical 2")
+- Summary sentences synthesizing the overall pattern
+
 ## Next Steps
-
-### Database Integration (MongoDB)
-
-Currently the backend reads results from JSON files in `ml-pipeline/outputs/`. The next step is to store them in MongoDB Atlas (free tier):
-- Pipeline writes results to MongoDB after training
-- Backend reads from MongoDB instead of JSON files
-- Audit log persists to MongoDB (currently in-memory, lost on restart)
-- Simulated predictions can be saved and reviewed later
 
 ### GCP Deployment
 
@@ -234,11 +276,15 @@ Currently the backend reads results from JSON files in `ml-pipeline/outputs/`. T
 | Backend | `uvicorn app.main:app` | Cloud Run Service |
 | Frontend | `npm run dev` | Firebase Hosting |
 | Models | `ml-pipeline/outputs/*.joblib` | Cloud Storage |
-| Database | JSON files | MongoDB Atlas |
+| Database | MongoDB Atlas (already integrated) | MongoDB Atlas (same cluster) |
+
+Environment variables (`MONGO_URI`, `MONGO_DB_NAME`) can be injected via GCP Cloud Run's `--set-env-vars` or Secret Manager.
 
 ### Other Improvements
 
-- Tuning: adjust `contamination` parameter for Bathroom (currently too conservative)
+- Tuning: adjust `contamination` parameter for Bathroom (currently too conservative — perfect precision but only 0.456 recall)
+- Persist audit log to MongoDB (currently in-memory, lost on restart)
+- Save simulated predictions to MongoDB for later review
 - Replace placeholder comparison values in `evaluate.py` with actual Llumiguano et al. numbers
 - Add privacy controls (mask specific rooms/time ranges)
 - Add caregiver feedback loop (mark false positives/negatives)

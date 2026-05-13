@@ -23,6 +23,7 @@ data/zenodo_test/
 ml-pipeline/outputs/*.joblib
 ml-pipeline/outputs/*.png
 ml-pipeline/outputs/*.json
+ml-pipeline/outputs/*.txt
 
 # Jupyter
 .ipynb_checkpoints/

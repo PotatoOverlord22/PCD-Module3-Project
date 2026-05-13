@@ -15,17 +15,19 @@ const TABS = [
     { label: "Anomalies", path: "/anomalies" },
     { label: "All Days", path: "/days" },
     { label: "Simulate", path: "/simulate" },
-    { label: "Evaluation", path: "/evaluation" },
 ];
 
-const ADMIN_TAB = { label: "Audit Log", path: "/audit" };
+const ADMIN_TABS = [
+    { label: "Evaluation", path: "/evaluation" },
+    { label: "Audit Log", path: "/audit" },
+];
 
 export default function DashboardLayout() {
     const navigate = useNavigate();
     const location = useLocation();
     const role = getRole();
 
-    const tabs = role === "admin" ? [...TABS, ADMIN_TAB] : TABS;
+    const tabs = role === "admin" ? [...TABS, ...ADMIN_TABS] : TABS;
 
     const currentTab =
         tabs.find((t) => location.pathname.startsWith(t.path))?.path ?? "/anomalies";

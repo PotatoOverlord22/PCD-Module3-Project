@@ -12,6 +12,7 @@ export const RoomInfoSchema = z.object({
     status: z.enum(["normal", "anomaly"]),
     score: z.number(),
     top_features: z.array(FeatureSchema).optional().default([]),
+    explanation: z.string().nullable().optional().default(null),
 });
 
 export type RoomInfo = z.infer<typeof RoomInfoSchema>;
