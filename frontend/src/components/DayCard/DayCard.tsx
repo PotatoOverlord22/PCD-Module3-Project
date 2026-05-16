@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { Card, CardActionArea, CardContent, Typography, Chip, Stack } from "@mui/material";
+import LockIcon from "@mui/icons-material/Lock";
 import type { DaySummary } from "../../model/day";
 import "./DayCard.scss";
 
@@ -11,6 +12,7 @@ interface DayCardProps {
 export default function DayCard({ day, basePath }: DayCardProps) {
     const navigate = useNavigate();
     const hasAnomaly = Object.values(day.rooms).some((r) => r.status === "anomaly");
+    const redacted = day.redacted_rooms ?? [];
 
     return (
         <Card
@@ -30,6 +32,16 @@ export default function DayCard({ day, basePath }: DayCardProps) {
                                 size="small"
                                 color={r.status === "anomaly" ? "error" : "success"}
                                 variant="outlined"
+                            />
+                        ))}
+                        {redacted.map((name) => (
+                            <Chip
+                                key={`r-${name}`}
+                                icon={<LockIcon />}
+                                label={`${name.toLowerCase()} · private`}
+                                size="small"
+                                variant="outlined"
+                                sx={{ color: "text.disabled", borderStyle: "dashed" }}
                             />
                         ))}
                     </Stack>

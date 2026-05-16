@@ -6,6 +6,7 @@ import {
     CircularProgress,
     Alert,
 } from "@mui/material";
+import LockIcon from "@mui/icons-material/Lock";
 import { FileDropzone, FileDropzoneBody } from "mui-file-upload";
 import { postPredict } from "../../api/requests";
 import { parseSensorCsv } from "../../utils/csv";
@@ -104,6 +105,13 @@ export default function SimulateView() {
                     <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
                         Results for {result.date} ({result.total_events} events processed)
                     </Typography>
+
+                    {result.redacted_rooms && result.redacted_rooms.length > 0 && (
+                        <Alert severity="info" icon={<LockIcon />} sx={{ mb: 2 }}>
+                            Results for {result.redacted_rooms.map((r) => r.toLowerCase()).join(", ")} are hidden for privacy.
+                            Administrators with explicit authorization can view the full data.
+                        </Alert>
+                    )}
 
                     {Object.entries(result.rooms).map(([room, info]) => (
                         <Box key={room} sx={{ mb: 2 }}>

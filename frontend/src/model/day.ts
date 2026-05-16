@@ -20,6 +20,10 @@ export type RoomInfo = z.infer<typeof RoomInfoSchema>;
 export const DaySummarySchema = z.object({
     date: z.string(),
     rooms: z.record(z.string(), RoomInfoSchema),
+    // Names of rooms whose data was redacted server-side for the current role.
+    // Caregivers see this populated (e.g. ["BATHROOM"]); the matching rooms
+    // do NOT appear in `rooms`. Admins see this empty/undefined.
+    redacted_rooms: z.array(z.string()).optional().default([]),
 });
 
 export type DaySummary = z.infer<typeof DaySummarySchema>;

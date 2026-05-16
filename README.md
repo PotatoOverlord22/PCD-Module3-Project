@@ -266,6 +266,46 @@ Anomalies now include plain-text explanations with:
 - Concrete sensor counts vs training baselines (e.g. "12 sensor events vs typical 2")
 - Summary sentences synthesizing the overall pattern
 
+### Privacy-by-Design (Role-Based Data Redaction)
+
+Sensor activity in sensitive rooms (default: `BATHROOM`) is filtered **server-side** from API responses sent to users with the `caregiver` role. Administrators with explicit clinical authorization still see the full data.
+
+- **Defense beyond UI hiding** — the response payload itself does not contain the redacted room data, so caregivers cannot bypass the restriction via DevTools or direct API calls (`curl /days`, `/anomalies`, `/predict` all redacted)
+- **Transparent to the user** — the response includes a `redacted_rooms: ["BATHROOM"]` field, so the dashboard renders a `🔒 private` placeholder where data would have been
+- **Configurable** — change the redacted set via env var `PRIVATE_ROOMS_FOR_CAREGIVER=BATHROOM,BEDROOM` (comma-separated, empty string disables)
+- **Audit trail** — the existing audit log records every request including who attempted to access what, so administrative overrides are accountable
+
+Endpoints affected: `GET /days`, `GET /days/{date}`, `GET /anomalies`, `POST /predict`. `GET /anomalies/evaluation` returns aggregate metrics only (no per-day per-room activity) and is admin-only on the dashboard anyway.
+
+## Cloud Deployment (Live)
+
+The application is deployed to Microsoft Azure and is reachable in a browser without any local setup:
+
+| Component | URL / Service |
+|---|---|
+| **Frontend (live demo)** | https://gentle-hill-0493bc203.7.azurestaticapps.net |
+| **Backend API** | https://caregiver-backend.ambitioussky-65844e0a.westeurope.azurecontainerapps.io |
+| **Interactive API docs** | https://caregiver-backend.ambitioussky-65844e0a.westeurope.azurecontainerapps.io/docs |
+| **Frontend hosting** | Azure Static Web Apps (Free tier, GitHub Actions CI/CD) |
+| **Backend hosting** | Azure Container Apps (Consumption plan, Docker from Azure Container Registry Basic) |
+| **Database** | MongoDB Atlas M0 (Frankfurt) |
+| **Region** | West Europe |
+
+### How to test the deployed app (no install required)
+
+1. Open the **Frontend URL** above
+2. Login with one of:
+   - **Caregiver** — `caregiver / care123` → sees Anomalies, All Days, Simulate (bathroom data redacted)
+   - **Admin** — `admin / admin123` → sees all 5 tabs + full bathroom data
+3. Try the tabs:
+   - **Anomalies / All Days** — click any card → SHAP explanation
+   - **Simulate** — upload `data/sample_day.csv` from the repo → live ML inference
+   - **Evaluation** (admin) — model metrics
+   - **Audit Log** (admin) — request history
+4. Privacy demo: login as caregiver, open any day → `🔒 bathroom · private` chip + info banner. Login as admin → bathroom appears with green/red status.
+
+Full deployment guide and `az` CLI commands are in [`DEPLOY.md`](./DEPLOY.md).
+
 ## Next Steps
 
 ### GCP Deployment
@@ -286,8 +326,8 @@ Environment variables (`MONGO_URI`, `MONGO_DB_NAME`) can be injected via GCP Clo
 - Persist audit log to MongoDB (currently in-memory, lost on restart)
 - Save simulated predictions to MongoDB for later review
 - Replace placeholder comparison values in `evaluate.py` with actual Llumiguano et al. numbers
-- Add privacy controls (mask specific rooms/time ranges)
 - Add caregiver feedback loop (mark false positives/negatives)
+- Extend privacy controls to time-range masking (currently only per-room redaction is implemented)
 
 ## Reproducibility
 

@@ -20,6 +20,7 @@ export const PredictResponseSchema = z.object({
     date: z.string(),
     rooms: z.record(z.string(), RoomInfoSchema),
     total_events: z.number(),
+    redacted_rooms: z.array(z.string()).optional().default([]),
 });
 
 export type PredictResponse = z.infer<typeof PredictResponseSchema>;

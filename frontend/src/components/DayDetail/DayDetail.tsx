@@ -6,8 +6,10 @@ import {
     Button,
     Box,
     LinearProgress,
+    Alert,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import LockIcon from "@mui/icons-material/Lock";
 import { getDayDetail } from "../../api/requests";
 import type { DaySummary } from "../../model/day";
 import "./DayDetail.scss";
@@ -25,11 +27,24 @@ export default function DayDetail() {
 
     if (!data) return <LinearProgress />;
 
+    const redacted = data.redacted_rooms ?? [];
+
     return (
         <Paper className="day-detail" sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>
                 {data.date}
             </Typography>
+
+            {redacted.length > 0 && (
+                <Alert
+                    severity="info"
+                    icon={<LockIcon />}
+                    sx={{ mb: 2 }}
+                >
+                    Activity in {redacted.map((r) => r.toLowerCase()).join(", ")} is hidden for privacy.
+                    Administrators with explicit clinical authorization can view the full data.
+                </Alert>
+            )}
 
             {Object.entries(data.rooms).map(([room, info]) => (
                 <Box key={room} className="day-detail__room" sx={{ mb: 2 }}>

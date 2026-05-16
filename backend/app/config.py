@@ -19,3 +19,14 @@ MONGO_URI: str | None = os.getenv("MONGO_URI")
 
 # MongoDB database name — override via env var if needed.
 MONGO_DB_NAME: str = os.getenv("MONGO_DB_NAME", "pcd-module3-project")
+
+# Privacy: rooms whose data is redacted from API responses sent to users
+# with the "caregiver" role. Admins always see the full data. Default
+# hides BATHROOM activity (intimate space) — change via env var, e.g.
+#   PRIVATE_ROOMS_FOR_CAREGIVER=BATHROOM,BEDROOM
+# Empty string disables redaction entirely.
+PRIVATE_ROOMS_FOR_CAREGIVER: list[str] = [
+    r.strip().upper()
+    for r in os.getenv("PRIVATE_ROOMS_FOR_CAREGIVER", "BATHROOM").split(",")
+    if r.strip()
+]
